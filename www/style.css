@@ -1,0 +1,32 @@
+@import url("//fonts.googleapis.com/css?family=Quattrocento:400,700");
+
+h2 {
+    font-family: 'Quattrocento', cursive;
+    font-weight: bold;
+    line-height: 1.1;
+    color: #fff;
+    margin: 0 -15px 1em -15px;
+    height: 4em;
+    padding-top: 1em;
+    background: url(xhero-bg.jpg.pagespeed.ic.tHxX6-HepF.webp) center bottom #e8554e;
+    -webkit-background-size: cover;
+    -moz-background-size: cover;
+    -o-background-size: cover;
+    background-size: cover;
+    text-align: center;
+    height: 166px;
+    background-position: center center;
+    font-size: 44px;
+}
+
+h2 a, h2 a:visited, h2 a:active {
+  color: #fff;
+}
+
+h2 a:hover {
+  color: #e8554e;
+}
+
+body {
+  background-color: #fff;
+}
