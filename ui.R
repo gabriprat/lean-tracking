@@ -1,5 +1,5 @@
 shinyUI(fluidPage(theme = "style.css",
-  titlePanel(
+  titlePanel(windowTitle = "Lean tracking App",
     tags$span(
     tags$a(href="http://leantracking.com", "Lean Tracking"), 
     span(" » App"))),
