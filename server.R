@@ -176,7 +176,7 @@ shinyServer(function(input, output) {
     }))
     
     p <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
-      stat_summary(geom="ribbon", fun.data=mean_cl_normal, width=0.1, conf.int=0.95, fill="lightblue") +
+      stat_summary(geom="ribbon", fun.data=mean_cl_normal, fun.args=list(conf.int=0.95), fill="lightblue") +
       stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
       stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
       stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="text", position=position_dodge(.9), vjust = -1.5, show_guide = FALSE) +
