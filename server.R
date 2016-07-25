@@ -82,7 +82,7 @@ shinyServer(function(input, output) {
       cs <- cumsum(t)
       df <- data.frame(Date = sort(unique(data[,x])))
       df$Items <- cs
-      names(df) <- c("Date", "Items")
+      names(df) <- c("Date", "Work items")
       df
     })
     
@@ -106,7 +106,7 @@ shinyServer(function(input, output) {
       return(NULL)
     time <- input$data[input$closedIdx,"LeadTime"]
     qnt <- input$qnt
-    hvals <- hist(time, breaks=length(unique(time)), xlim=c(qnt["0%"], max(time, na.rm=TRUE)))
+    hvals <- hist(time, breaks=length(unique(time)), xlim=c(qnt["0%"], max(time, na.rm=TRUE)), main="", xlab="Days to complete")
     top <- hvals$counts[1]
     abline(v = qnt["50%"], col = "goldenrod1", lwd = 1, lty = 2)
     text(x = qnt["50%"], top, col = "goldenrod1", labels="50%", pos=4)
@@ -125,7 +125,7 @@ shinyServer(function(input, output) {
     data <- input$data[input$closedIdx,]
     qnt <- input$qnt
     dateCols <- input$dateCols
-    plot(data[,tail(dateCols, 1)], time, xlab="Closed date", col=rgb(0,100,0,50,maxColorValue=255), pch=16, xaxt  = "n")
+    plot(data[,tail(dateCols, 1)], time, xlab="Closing date", col=rgb(0,100,0,50,maxColorValue=255), pch=16, xaxt  = "n", ylab="Days to complete")
     dmin <- min(data[input$closedIdx,tail(dateCols, 1)], na.rm=T)
     dmax <- max(data[input$closedIdx,tail(dateCols, 1)], na.rm=T)
     ddif <- dmax - dmin
@@ -150,7 +150,7 @@ shinyServer(function(input, output) {
     p <- ggplot(data,aes_string(x="ClosedMonth",y="1")) +  
       stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") + 
       stat_summary(aes(label=..y..), fun.y=sum, geom="text", vjust = -.25) +
-      theme_bw() + ylab("Work items") + ggtitle("Throughput") + theme(legend.key = element_blank())
+      theme_bw() + xlab("Closing date") + ylab("Work items") + ggtitle("Throughput") + theme(legend.key = element_blank())
     
     print(p)
     
@@ -182,7 +182,7 @@ shinyServer(function(input, output) {
       stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="text", position=position_dodge(.9), vjust = -1.5, show.legend = FALSE) +
       geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.sd)), colour="mean", size=.7, parse=T), data=sd.ev, position=position_dodge(.9), vjust = -1.5, show.legend = FALSE) +
       theme_bw() + scale_colour_manual(values = c("#377EB8", "#E41A1C")) + 
-      ylab("85%ile lead time") + ggtitle("Lead time") + theme(legend.title=element_blank(), legend.key = element_blank())
+      xlab("Closing date") + ylab("Days") + ggtitle("Lead time") + theme(legend.title=element_blank(), legend.key = element_blank())
     
     print(p)
     
