@@ -176,12 +176,12 @@ shinyServer(function(input, output) {
     }))
     
     p <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
-      stat_summary(geom="ribbon", fun.data=mean_cl_normal, fun.args=list(conf.int=0.95), fill="lightblue")+
-      stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
+      stat_summary(aes(fill="95% conf.int."), geom="ribbon", fun.data=mean_cl_normal, fun.args=list(conf.int=0.95), alpha=.2) +
       stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
+      stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
       stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="text", position=position_dodge(.9), vjust = -1.5, show.legend = FALSE) +
       geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.sd)), colour="mean", size=.7, parse=T), data=sd.ev, position=position_dodge(.9), vjust = -1.5, show.legend = FALSE) +
-      theme_bw() + scale_colour_manual(values = c("#377EB8", "#E41A1C")) + 
+      theme_bw() +
       xlab("Closing date") + ylab("Days") + ggtitle("Lead time") + theme(legend.title=element_blank(), legend.key = element_blank())
     
     print(p)
