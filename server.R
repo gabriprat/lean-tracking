@@ -170,18 +170,27 @@ shinyServer(function(input, output) {
     pctl85 <- function(x) {
       quantile(x, .85)
     }
-    sd.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = function(x) { 
+    conf.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = function(x) { 
       x.mean <- mean(x)
-      x.sd <- sd(x)
-      c(mean = x.mean, sd = x.sd) 
+      x.conf.int <- sd(x)/sqrt(length(x))*1.96
+      c(mean = x.mean, conf.int = x.conf.int) 
     }))
     
+    mean_conf <- function (x, mult = 1) 
+    {
+      x <- stats::na.omit(x)
+      se <- mult * sqrt(stats::var(x)/length(x))
+      mean <- mean(x)
+      conf.int <- se * qnorm(0.975)
+      data.frame(y = mean, ymin = mean - conf.int, ymax = mean + conf.int)
+    }
+    
     p <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
-      stat_summary(aes(fill="95% conf.int."), geom="ribbon", fun.data=mean_cl_normal, fun.args=list(conf.int=0.95), alpha=.2) +
+      stat_summary(aes(fill="95% conf.int"), geom="ribbon", fun.data=mean_conf, color=NA, alpha=.3) +
       stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
       stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
-      stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="text", position=position_dodge(.9), vjust = -1, show.legend = FALSE) +
-      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.sd)), colour="mean", size=.7, parse=T), data=sd.ev, position=position_dodge(.9), vjust = -1.5, show.legend = FALSE) +
+      stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="label", show.legend = FALSE, size=5) +
+      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.conf.int)), colour="mean", parse=T), data=conf.ev, position=position_dodge(.9), vjust = -1.5, size=4, show.legend = FALSE) +
       theme_bw() +
       xlab("Closing date") + ylab("Days") + ggtitle("Lead time") + theme(legend.title=element_blank(), legend.key = element_blank())
     
