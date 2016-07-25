@@ -147,10 +147,10 @@ shinyServer(function(input, output) {
     time <- input$data[input$closedIdx,"LeadTime"]
     data <- input$data[input$closedIdx,]
     
-    p <- ggplot(data,aes_string(x="ClosedMonth",y="1", fill=input$columnType)) +  
-      stat_summary(fun.y=sum, position="stack", geom="bar") + 
-      stat_summary(aes(label=..y..), position="stack", fun.y=length, geom="text", vjust = -.25) +
-      theme_bw() + ylab("Work items") + ggtitle("Throughput")
+    p <- ggplot(data,aes_string(x="ClosedMonth",y="1")) +  
+      stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") + 
+      stat_summary(aes(label=..y..), fun.y=sum, geom="text", vjust = -.25) +
+      theme_bw() + ylab("Work items") + ggtitle("Throughput") + theme(legend.key = element_blank())
     
     print(p)
     
