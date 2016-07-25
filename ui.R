@@ -38,9 +38,13 @@ shinyUI(fluidPage(theme = "style.css",
                      "Above 95%" = "ninetyfive",
                      "Above Q3 + 1.5*IQR" = "iqr"), 
                    selected="ninetyfive"),
-      textInput("columnOpened", "Opened column title", value="Input"),
-      textInput("columnClosed", "Closed column title", value="Closed"),
-      textInput("dateFormat", "Date format", value="%Y/%m/%d"),
+      textInput("columnOpened", "Opened column title", value="Creado"),
+      textInput("columnClosed", "Closed column title", value="Cerrada"),
+      textInput("columnState", "State column title", value="Estado"),
+      textInput("columnType", "Type column title", value="Clasificación.Petición"),
+      textInput("closedState", "Closed state value", value="En PRO / Resuelta"),
+      textInput("discardedState", "Discarded state value", value="Desestimada"),
+      textInput("dateFormat", "Date format", value="%Y-%m-%d %H:%M"),
       tags$small(
         "Here you can find the ",
         tags$a(href="https://stat.ethz.ch/R-manual/R-devel/library/base/html/strptime.html", "expected format masks")
@@ -52,7 +56,7 @@ shinyUI(fluidPage(theme = "style.css",
         tabPanel("CFD", plotOutput("cfd")),
         tabPanel("Histogram", plotOutput("histo")),
         tabPanel("Scatter plot", plotOutput("scatter")),
-        tabPanel("Evolution", plotOutput("evolution"))
+        tabPanel("Evolution", plotOutput("leadTime"),  plotOutput("throughput"))
       )
     )
   )

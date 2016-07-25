@@ -27,24 +27,35 @@ shinyServer(function(input, output) {
       data[,idx] <- as.Date(data[,idx], format=input$dateFormat)
     }
     
+    closedIdx <- data[,input$columnState] == input$closedState 
+    
+    # Remove inconsistencies: open tasks with closed date
+    openIdx <- !(data[,input$columnState] %in% c(input$closedState, input$discardedState))
+    data[openIdx, input$columnClosed] <- NA 
+    
     # Compute lead time and the closing month and year (used for aggregation) for each row
-    data[,"LeadTime"] <- as.numeric(data[,tail(dateCols, 1)] - data[,head(dateCols, 1)])
-    data[,"ClosedMonth"] <- strftime(data[,tail(dateCols, 1)], "%m")
-    data[,"ClosedYear"] <- strftime(data[,tail(dateCols, 1)], "%Y")
+    data[closedIdx,"LeadTime"] <- as.numeric(data[closedIdx,tail(dateCols, 1)] - data[closedIdx,head(dateCols, 1)])
+   
+     #Remove negative lead times
+    #data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < 0,"LeadTime"] <- NA 
+    
+    cm <- strftime(data[,tail(dateCols, 1)], "%m")
+    cy <- strftime(data[,tail(dateCols, 1)], "%Y")
+    data[,"ClosedMonth"] <- ISOdate(cy, cm, 1)
     
     # Remove outliers from the lead time according to user prefs
-    qnt <- quantile(data[,"LeadTime"], probs=c(0, .25, .50, .75, .85, .95, 1), na.rm = T)
-    H <- 1.5 * IQR(data[,"LeadTime"], na.rm = T)
+    qnt <- quantile(data[closedIdx,"LeadTime"], probs=c(0, .25, .50, .75, .85, .95, 1), na.rm = T)
+    H <- 1.5 * IQR(data[closedIdx,"LeadTime"], na.rm = T)
     
     # Exclude outliers based on user input 
-    data[data[,"LeadTime"] < (qnt["25%"] - H),"LeadTime"] <- NA
+    data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < (qnt["25%"] - H),"LeadTime"] <- NA
     switch(input$outliers,
-           ninetyfive = data[data[,"LeadTime"] > qnt["95%"], "LeadTime"] <- NA,
-           iqr = data[data[,"LeadTime"] > (qnt["75%"] + H), "LeadTime"] <- NA,
+           ninetyfive = data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] > qnt["95%"], "LeadTime"] <- NA,
+           iqr = data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] > (qnt["75%"] + H), "LeadTime"] <- NA,
            none = time)
     
     # Return data, quantiles and date columns
-    list(data=data, qnt=qnt, dateCols=dateCols)
+    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, columnType=input$columnType)
   })
   
   # Data table parsed from the input file
@@ -93,14 +104,14 @@ shinyServer(function(input, output) {
     input <- dataInput()
     if (is.null(input))
       return(NULL)
-    time <- input$data[,"LeadTime"]
+    time <- input$data[input$closedIdx,"LeadTime"]
     qnt <- input$qnt
     hvals <- hist(time, breaks=length(unique(time)), xlim=c(qnt["0%"], max(time, na.rm=TRUE)))
     top <- hvals$counts[1]
     abline(v = qnt["50%"], col = "goldenrod1", lwd = 1, lty = 2)
     text(x = qnt["50%"], top, col = "goldenrod1", labels="50%", pos=4)
-    abline(v = qnt["75%"], col = "orange", lwd = 1, lty = 2)
-    text(x = qnt["75%"], top, col = "orange", labels="75%", pos=4)
+    abline(v = qnt["85%"], col = "orange", lwd = 1, lty = 2)
+    text(x = qnt["85%"], top, col = "orange", labels="85%", pos=4)
     abline(v = qnt["95%"], col = "red", lwd = 1, lty = 2)
     text(x = qnt["95%"], top, col = "red", labels="95%", pos=2)
   })
@@ -110,41 +121,71 @@ shinyServer(function(input, output) {
     input <- dataInput()
     if (is.null(input))
       return(NULL)
-    time <- input$data[,"LeadTime"]
-    data <- input$data
+    time <- input$data[input$closedIdx,"LeadTime"]
+    data <- input$data[input$closedIdx,]
     qnt <- input$qnt
-    plot(data[,"Closed"], time, xlab="Closed date", col=rgb(0,100,0,50,maxColorValue=255), pch=16, xaxt  = "n")
-    dmin <- min(data[,"Closed"], na.rm=T)
-    dmax <- max(data[,"Closed"], na.rm=T)
+    dateCols <- input$dateCols
+    plot(data[,tail(dateCols, 1)], time, xlab="Closed date", col=rgb(0,100,0,50,maxColorValue=255), pch=16, xaxt  = "n")
+    dmin <- min(data[input$closedIdx,tail(dateCols, 1)], na.rm=T)
+    dmax <- max(data[input$closedIdx,tail(dateCols, 1)], na.rm=T)
     ddif <- dmax - dmin
     ticks_at <- dmin + approx(c(0, 503), n=4)$y
     axis(side=1, at=ticks_at, ticks_at)
     abline(h = qnt["50%"], col = "goldenrod1", lwd = 1, lty = 2)
     text(dmin, qnt["50%"], col = "goldenrod1", labels="50%", pos=4)
-    abline(h = qnt["75%"], col = "orange", lwd = 1, lty = 2)
-    text(dmin, qnt["75%"], col = "orange", labels="75%", pos=4)
+    abline(h = qnt["85%"], col = "orange", lwd = 1, lty = 2)
+    text(dmin, qnt["85%"], col = "orange", labels="85%", pos=4)
     abline(h = qnt["95%"], col = "red", lwd = 1, lty = 2)
     text(dmin, qnt["95%"], col = "red", labels="95%", pos=4)
   })
   
-  # Evolution of the Lead Time and Throughput over time
-  output$evolution <- renderPlot({
+  # Throughput evolution over time
+  output$throughput <- renderPlot({
     input <- dataInput()
     if (is.null(input))
       return(NULL)
-    time <- input$data[,"LeadTime"]
-    data <- input$data
-    evolution <- aggregate(LeadTime ~ ClosedMonth + ClosedYear, data, FUN = function(x) c(meanLeadTime = mean(x), throughput = length(x) ) )
-    months <- ISOdate(evolution[,"ClosedYear"], evolution[,"ClosedMonth"], 1)
-    meanLeadTime <- evolution["LeadTime"][[1]][,"meanLeadTime"]
-    throughput <- evolution["LeadTime"][[1]][,"throughput"]
-    par(xpd=TRUE,oma=c(3,0,0,0)) 
-    par(mar = c(5,4,4,4) + 0.1)
-    barplot(throughput, col="gray",yaxt="n",xlab="",ylab="")
-    axis(4)
-    par(new=T)
-    plot(months, meanLeadTime, type="o", col="red", xlab = "", ylab = "Mean lead time in days (lines)", lwd=2)
-    mtext("Throughput in #tickets (bars)", side = 4, line = 3, cex = par("cex.lab"))
+    time <- input$data[input$closedIdx,"LeadTime"]
+    data <- input$data[input$closedIdx,]
+    
+    p <- ggplot(data,aes_string(x="ClosedMonth",y="1", fill=input$columnType)) +  
+      stat_summary(fun.y=sum, position="stack", geom="bar") + 
+      stat_summary(aes(label=..y..), position="stack", fun.y=sum, geom="text", vjust = -.25) +
+      theme_bw() + ylab("Work items") + ggtitle("Throughput")
+    
+    print(p)
+    
+  })
+  
+  # Lead time evolution over time
+  output$leadTime <- renderPlot({
+    input <- dataInput()
+    if (is.null(input))
+      return(NULL)
+    time <- input$data[input$closedIdx,"LeadTime"]
+    data <- input$data[input$closedIdx,]
+    
+    #stat_summary(fun.y=function(x) {quantile(x, .85)}) + 
+    
+    pctl85 <- function(x) {
+      quantile(x, .85)
+    }
+    sd.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = function(x) { 
+      x.mean <- mean(x)
+      x.sd <- sd(x)
+      c(mean = x.mean, sd = x.sd) 
+    }))
+    
+    p <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
+      stat_summary(geom="ribbon", fun.data=mean_cl_normal, width=0.1, conf.int=0.95, fill="lightblue") +
+      stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
+      stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
+      stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="text", position=position_dodge(.9), vjust = -1.5, show_guide = FALSE) +
+      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.sd)), colour="mean", size=.7, parse=T), data=sd.ev, position=position_dodge(.9), vjust = -1.5, show_guide = FALSE) +
+      theme_bw() + scale_colour_manual(values = c("#377EB8", "#E41A1C")) + 
+      ylab("85%ile lead time") + ggtitle("Lead time") + theme(legend.title=element_blank(), legend.key = element_blank())
+    
+    print(p)
+    
   })
 })
 
