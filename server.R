@@ -180,12 +180,12 @@ shinyServer(function(input, output) {
       stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
       stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
       stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="label", show.legend = FALSE, size=5) +
-      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.conf.int), " (", round(LeadTime.cv), "%)"), colour="mean", parse=T), data=conf.ev, position=position_dodge(.9), vjust = -1.5, size=4, show.legend = FALSE) +
-      theme_bw() +
-      xlab("Closing date") + ylab("Lead time (days)") + 
+      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.conf.int), " (", round(LeadTime.cv), "%)"), colour="mean", parse=T), data=conf.ev, vjust = 1.5, show.legend = FALSE) +
+      theme_bw() + labs(colour="Lead time") +
+      xlab("Closing month") + ylab("Lead time (days)") + 
       theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
             panel.grid.minor = element_blank(), panel.border = element_blank(),
-            legend.position="top", legend.title=element_blank(), legend.key = element_blank())
+            legend.position="top", legend.key = element_blank())
     
     ggplot_dual_axis(p1, p2)
     
