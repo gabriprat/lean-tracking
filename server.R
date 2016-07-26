@@ -1,5 +1,6 @@
 library(shiny)
 library(ggplot2)
+library(gtable)
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 9MB.
@@ -140,25 +141,8 @@ shinyServer(function(input, output) {
     text(dmin, qnt["95%"], col = "red", labels="95%", pos=4)
   })
   
-  # Throughput evolution over time
-  output$throughput <- renderPlot({
-    input <- dataInput()
-    if (is.null(input))
-      return(NULL)
-    time <- input$data[input$closedIdx,"LeadTime"]
-    data <- input$data[input$closedIdx,]
-    
-    p <- ggplot(data,aes_string(x="ClosedMonth",y="1")) +  
-      stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") + 
-      stat_summary(aes(label=..y..), fun.y=sum, geom="text", vjust = -.25) +
-      theme_bw() + xlab("Closing date") + ylab("Work items") + ggtitle("Throughput") + theme(legend.key = element_blank())
-    
-    print(p)
-    
-  })
-  
-  # Lead time evolution over time
-  output$leadTime <- renderPlot({
+  # Lead time and throughput evolution over time
+  output$evolution <- renderPlot({
     input <- dataInput()
     if (is.null(input))
       return(NULL)
@@ -170,34 +154,111 @@ shinyServer(function(input, output) {
     pctl85 <- function(x) {
       quantile(x, .85)
     }
-    conf.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = function(x) { 
-      x.mean <- mean(x)
-      x.conf.int <- sd(x)/sqrt(length(x))*1.96
-      c(mean = x.mean, conf.int = x.conf.int) 
-    }))
     
-    mean_conf <- function (x, mult = 1) 
-    {
+    mean_stats <- function(x) {
       x <- stats::na.omit(x)
-      se <- mult * sqrt(stats::var(x)/length(x))
-      mean <- mean(x)
-      conf.int <- se * qnorm(0.975)
-      data.frame(y = mean, ymin = mean - conf.int, ymax = mean + conf.int)
+      x.mean <- mean(x)
+      x.sd <- sd(x)
+      se <- x.sd/sqrt(length(x))
+      x.conf.int <- se * qnorm(0.975) 
+      qnt <- quantile(x, c(.25,.5,.75))
+      x.cv <- (x.sd/x.mean)*100 #coeficient of variation
+      c(mean = x.mean, conf.int = x.conf.int, cv=x.cv, y = x.mean, ymin = x.mean - x.conf.int, ymax = x.mean + x.conf.int) 
     }
     
-    p <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
-      stat_summary(aes(fill="95% conf.int"), geom="ribbon", fun.data=mean_conf, color=NA, alpha=.3) +
+    conf.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = mean_stats))
+    
+    p1 <- ggplot(data,aes_string(x="ClosedMonth",y="1")) +  
+      stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") + 
+      stat_summary(aes(label=..y..), fun.y=sum, geom="text", vjust = -.25) +
+      theme_bw() + xlab("Closing date") + ylab("Throughput (work items/month)") + 
+      theme(legend.position="bottom", legend.key = element_blank()) +
+      scale_fill_brewer()
+    
+    p2 <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
+      stat_summary(aes(fill="95% conf.int"), geom="ribbon", fun.data=mean_stats, color=NA, alpha=.15, show.legend = FALSE) +
       stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
       stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
       stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="label", show.legend = FALSE, size=5) +
-      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.conf.int)), colour="mean", parse=T), data=conf.ev, position=position_dodge(.9), vjust = -1.5, size=4, show.legend = FALSE) +
+      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.conf.int), " (", round(LeadTime.cv), "%)"), colour="mean", parse=T), data=conf.ev, position=position_dodge(.9), vjust = -1.5, size=4, show.legend = FALSE) +
       theme_bw() +
-      xlab("Closing date") + ylab("Days") + ggtitle("Lead time") + theme(legend.title=element_blank(), legend.key = element_blank())
+      xlab("Closing date") + ylab("Lead time (days)") + 
+      theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(), panel.border = element_blank(),
+            legend.position="top", legend.title=element_blank(), legend.key = element_blank())
     
-    print(p)
+    ggplot_dual_axis(p1, p2)
     
   })
 })
 
-
+ggplot_dual_axis = function(plot1, plot2, which.axis = "y") {
+  
+  grid::grid.newpage()
+  
+  # Increase right margin if which.axis == "y"
+  if(which.axis == "y") plot1 = plot1 + theme(plot.margin = unit(c(0.7, 1.5, 0.4, 0.4), "cm"))
+  
+  # Extract gtable
+  g1 = ggplot_gtable(ggplot_build(plot1))
+  
+  g2 = ggplot_gtable(ggplot_build(plot2))
+  
+  # Overlap the panel of the second plot on that of the first
+  pp = c(subset(g1$layout, name == "panel", se = t:r))
+  g = gtable_add_grob(g1, g2$grobs[[which(g2$layout$name == "panel")]], pp$t, pp$l, pp$b, pp$l)
+  
+  # Steal axis from second plot and modify
+  axis.lab = ifelse(which.axis == "x", "axis-b", "axis-l")
+  
+  ia = which(g2$layout$name == axis.lab)
+  
+  ga = g2$grobs[[ia]]
+  
+  ax = ga$children[[2]]
+  
+  # Switch position of ticks and labels
+  if(which.axis == "x") ax$heights = rev(ax$heights) else ax$widths = rev(ax$widths)
+  
+  ax$grobs = rev(ax$grobs)
+  
+  if(which.axis == "x") 
+    
+    ax$grobs[[2]]$y = ax$grobs[[2]]$y - unit(1, "npc") + unit(0.15, "cm") else
+      
+      ax$grobs[[1]]$x = ax$grobs[[1]]$x - unit(1, "npc") + unit(0.15, "cm")
+  
+  # Modify existing row to be tall enough for axis
+  if(which.axis == "x") g$heights[[2]] = g$heights[g2$layout[ia,]$t]
+  
+  # Add new row or column for axis label
+  if(which.axis == "x") {
+    
+    g = gtable_add_grob(g, ax, 2, 4, 2, 4) 
+    
+    g = gtable_add_rows(g, g2$heights[1], 1)
+    
+    g = gtable_add_grob(g, g2$grob[[6]], 2, 4, 2, 4)
+    
+  } else {
+    
+    g = gtable_add_cols(g, g2$widths[g2$layout[ia, ]$l], length(g$widths) - 1)
+    
+    g = gtable_add_grob(g, ax, pp$t, length(g$widths) - 1, pp$b) 
+    
+    g = gtable_add_grob(g, g2$grob[[7]], pp$t, length(g$widths), pp$b - 1)
+    
+  }
+  
+  # extract legend
+  leg1 <- g1$grobs[[which(g1$layout$name == "guide-box")]]
+  leg2 <- g2$grobs[[which(g2$layout$name == "guide-box")]]
+  
+  g$grobs[[which(g$layout$name == "guide-box")]] <- 
+    gtable:::cbind_gtable(leg1, leg2, "first")
+  
+  # Draw it
+  grid::grid.draw(g)
+  
+}
 

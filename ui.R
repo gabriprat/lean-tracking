@@ -56,7 +56,7 @@ shinyUI(fluidPage(theme = "style.css",
         tabPanel("CFD", plotOutput("cfd")),
         tabPanel("Histogram", plotOutput("histo")),
         tabPanel("Scatter plot", plotOutput("scatter")),
-        tabPanel("Evolution", plotOutput("leadTime"),  plotOutput("throughput"))
+        tabPanel("Evolution", plotOutput("evolution"))
       )
     )
   )
