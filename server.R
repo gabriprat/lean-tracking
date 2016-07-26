@@ -1,6 +1,7 @@
-library(shiny)
 library(ggplot2)
 library(gtable)
+library(xts)
+
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 9MB.
@@ -70,7 +71,7 @@ shinyServer(function(input, output) {
   })
   
   # Cumulative Flow Diagram for all the date columns
-  output$cfd <- renderPlot({
+  output$cfd <- renderDygraph({
     input <- dataInput()
     if (is.null(input))
       return(NULL)
@@ -78,28 +79,23 @@ shinyServer(function(input, output) {
     dateCols <- input$dateCols
     names(dateCols) <- names(data)[dateCols]
     
-    dfs <- lapply(dateCols, function(x) { 
+    dfs <- Reduce(function(acc, x) { 
       t <- table(data[,x])
       cs <- cumsum(t)
       df <- data.frame(Date = sort(unique(data[,x])))
-      df$Items <- cs
-      names(df) <- c("Date", "Items")
-      df
-    })
+      df[,names(data)[x]] <- cs
+      merge(acc, df, by="Date", all=TRUE)
+    }, dateCols, data.frame(Date=as.Date(character())))
+    dfs <- xts(dfs[,-1], order.by = dfs[,1])
+    dfs
+    p <- dygraph(dfs) %>% dyRangeSelector()
     
-    p <- ggplot()
-    
-    for (idx in seq_along(dfs)) {
-      fill <- names(dfs)[idx]
-      df <- dfs[[idx]]
-      p <- p + geom_area(data=df, aes_q(quote(Date), quote(Items), fill=fill))
+    for (serieName in names(dfs)) {
+      p <- p %>% dySeries(serieName, fillGraph = TRUE)
     }
-    
-    p <- p + scale_fill_brewer(palette = "Paired") + theme_bw() + 
-      theme(legend.title=element_blank()) + ylab("Work items")
-      
-    print(p)
-  })
+    p <- p %>% dyOptions(connectSeparatedPoints = TRUE)
+    p
+})
   
   # Lead Time Hstogram with vertical lines at different quantiles
   output$histo <- renderPlot({

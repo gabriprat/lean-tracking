@@ -1,3 +1,6 @@
+library(shiny)
+library(dygraphs)
+
 shinyUI(fluidPage(theme = "style.css",
   titlePanel(windowTitle = "Lean tracking App",
     tags$span(
@@ -53,7 +56,7 @@ shinyUI(fluidPage(theme = "style.css",
     mainPanel(
       tabsetPanel(
         tabPanel("Data", dataTableOutput('data')),
-        tabPanel("CFD", plotOutput("cfd")),
+        tabPanel("CFD", dygraphOutput("cfd")),
         tabPanel("Histogram", plotOutput("histo")),
         tabPanel("Scatter plot", plotOutput("scatter")),
         tabPanel("Evolution", plotOutput("evolution"))
