@@ -46,7 +46,12 @@ function render() {
   testcanvas.style.width = w + 'px';
   testcanvas.style.height = h + 'px';
   var context = testcanvas.getContext('2d');
-  context.translate(-offset.left*2, -(offset.top-$(window).scrollTop())*2);
+  var y = offset.top;
+  var x = offset.left;
+  if (el.closest(".fixme").css("position") == "fixed") {
+    y = y - $(window).scrollTop();
+  }
+  context.translate(-x*2, -(y)*2);
   context.scale(2,2);
   
   html2canvas(el, {
