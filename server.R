@@ -37,6 +37,11 @@ shinyServer(function(input, output) {
     
     if (nchar(input$columnType) > 0 & !input$columnType %in% names(data)) {
       stop(paste0('The type column "', input$columnType, '" is not present in the dataset. Found these columns: ', paste(names(data), collapse=", ")))
+    } else {
+      if (input$columnType %in% names(data)) {
+        levels(data[,input$columnType]) <- c(levels(data[,input$columnType]), "<blank>")
+        data[data[,input$columnType]=='',input$columnType] <- '<blank>'
+      }
     }
       
     # Transform the date columns (the ones between the Opened and the Closed column including both) to date
@@ -131,12 +136,19 @@ shinyServer(function(input, output) {
     # Fill last NA values with previous ones
     dfs <- na.locf(dfs)
     
+    sum <- rep(0, dim(data)[2])
+    for (i in (length(dateCols)-1):1) {
+      sum <- sum + dfs[,names(dateCols)[i+1]]
+      dfs[,names(dateCols)[i]] <- dfs[,names(dateCols)[i]] - sum
+    }
+    
     p <- dygraph(dfs) %>% dyRangeSelector()
     
-    for (serieName in rev(names(dateCols))) {
+    for (serieName in names(dateCols)) {
       p <- p %>% dySeries(serieName, fillGraph = TRUE)
     }
-    p <- p %>% dyOptions(stackedGraph=F, fillAlpha=1, colors=c('#C1DDEB', '#62A1CB', '#C9E9AD', '#70BC6B', '#FCB8B8', '#EB5F60', '#FED29A', '#FFA54C', '#DAC9E2', '#9777B8', '#FFFFB8', '#C88B68')) %>% 
+    cl <- rev(c('#A6CEE3', '#1F78B4', '#B2DF8A', '#33A02C', '#FDBF6F', '#FF7F00', '#FB9A99', '#E31A1C', '#CAB2D6', '#6A3D9A', '#FFFF99', '#B15928')[1:length(dateCols)])
+    p <- p %>% dyOptions(stackedGraph=T, fillAlpha=.5, colors=cl) %>% 
       dyLegend(show = "always", hideOnMouseOut = FALSE, labelsDiv="labels", labelsSeparateLines=T)
     p
 })
@@ -207,13 +219,19 @@ shinyServer(function(input, output) {
     }
     
     conf.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = mean_stats))
-    
-    p1 <- ggplot(data,aes_string(x="ClosedMonth",y="1")) +  
-      stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") + 
-      stat_summary(aes(label=..y..), fun.y=sum, geom="text", vjust = -.25) +
+    p1 <- ggplot(data,aes_string(x="ClosedMonth",y="1")) 
+    legendtitle <- c()
+    if (nchar(input$columnType)>0) {
+      p1 <- p1 + stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") 
+      legendtitle <- element_text()
+    } else {
+      p1 <- p1 + stat_summary(aes(fill="items"), fun.y=sum, position="stack", geom="bar") 
+      legendtitle <- element_blank()
+    }
+    p1 <- p1 + stat_summary(aes(label=..y..), fun.y=sum, geom="text", vjust = -.25) +
       theme_bw() + xlab("Closing date") + ylab("Throughput (work items/month)") + 
-      theme(legend.position="bottom", legend.key = element_blank()) +
-      scale_fill_brewer()
+      theme(legend.position="bottom", legend.key = element_blank(), legend.title=legendtitle) +
+      scale_fill_brewer(palette="Pastel2")
     
     p2 <- ggplot(data,aes(x=ClosedMonth, y=LeadTime)) +  
       stat_summary(aes(fill="95% conf.int"), geom="ribbon", fun.data=mean_stats, color=NA, alpha=.15, show.legend = FALSE) +

@@ -57,7 +57,7 @@ shinyUI(fluidPage(theme = "style.css",
       tags$div(class = "fixme", checked = NA,
         tabsetPanel(
           tabPanel("Data", dataTableOutput('data')),
-          tabPanel("CFD", dygraphOutput("cfd"), div(id="labels")),
+          tabPanel("CFD", dygraphOutput("cfd", height=500), div(id="labels")),
           tabPanel("Histogram", plotOutput("histo")),
           tabPanel("Scatter plot", plotOutput("scatter")),
           tabPanel("Evolution", plotOutput("evolution"))
