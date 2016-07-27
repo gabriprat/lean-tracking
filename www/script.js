@@ -189,7 +189,9 @@ loadFormFromCookie = function () {
                     el.attr('checked', value === 'on' ? true : false);
                 } else if (el.attr('type') === 'radio') {
                     el.filter('[value="' + value.replace(/(['"])/g, "\\$1") + '"]').attr("checked", true);
-                }else {
+                } else if (el.attr('type') === 'file') {
+                    
+                } else {
                     el.val(value);
                 }
             } else if (el.is('select')) {

@@ -132,7 +132,7 @@ shinyServer(function(input, output) {
     # Start every column at 0
     dfs[1,is.na(dfs[1,])] <- 0
     # Interpolate values at NAs
-    dfs <- round(na.approx(dfs))
+    dfs <- na.locf(dfs)
     # Fill last NA values with previous ones
     dfs <- na.locf(dfs)
     

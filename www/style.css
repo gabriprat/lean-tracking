@@ -40,7 +40,7 @@ body {
   border: 1px solid #ddd;
 }
 
-.tab-content {
+.tab-pane {
   padding-top: 10px;
   overflow-x: scroll;
 }
