@@ -90,6 +90,7 @@ shinyServer(function(input, output) {
     qnt <- quantile(data[closedIdx,"LeadTime"], probs=c(0, .25, .50, .75, .85, .95, 1), na.rm = T)
     H <- 1.5 * IQR(data[closedIdx,"LeadTime"], na.rm = T)
     
+    data.all <- data[,]
     # Exclude outliers based on user input 
     data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < (qnt["25%"] - H),"LeadTime"] <- NA
     switch(input$outliers,
@@ -98,7 +99,7 @@ shinyServer(function(input, output) {
            none = time)
     
     # Return data, quantiles and date columns
-    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, columnType=input$columnType)
+    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, columnType=input$columnType, data.all=data.all)
   })
   
   # Data table parsed from the input file
@@ -199,7 +200,7 @@ shinyServer(function(input, output) {
     if (is.null(input))
       return(NULL)
     time <- input$data[input$closedIdx,"LeadTime"]
-    data <- input$data[input$closedIdx,]
+    data <- input$data.all[input$closedIdx,]
     
     #stat_summary(fun.y=function(x) {quantile(x, .85)}) + 
     
