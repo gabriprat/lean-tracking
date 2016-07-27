@@ -53,7 +53,7 @@ shinyUI(fluidPage(theme = "style.css",
       )
     ),
     mainPanel(
-      tags$head(tags$script(src="script.js"), tags$script(src="jquery.sticky.js")),
+      tags$head(tags$script(src="script.js"), tags$script(src="jquery.sticky.js"), tags$script(src="html2canvas.js"), tags$script(src="FileSaver.min.js")),
       tags$div(class = "fixme", checked = NA,
         tabsetPanel(
           tabPanel("Data", dataTableOutput('data')),

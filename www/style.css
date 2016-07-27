@@ -41,6 +41,11 @@ body {
 }
 
 .tab-pane {
-  padding-top: 10px;
+  margin-top: 10px;
   overflow-x: scroll;
+  background-color: #fff;
+}
+
+#export {
+  float: right;
 }

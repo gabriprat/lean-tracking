@@ -8,8 +8,56 @@ $(document).ready(function(){
       $(this).attr("name", $(this).attr("id"));
     });
     
+    $(".nav-tabs").append($('<button id="export">Export tab as PNG</button>').click(render));
+    
     loadFormFromCookie();
 });
+
+function safeFileName(name) {
+    return name.replace(/[^a-z0-9]/ig, '-').toLowerCase();
+}
+
+function getBounds(node) {
+    if (node.getBoundingClientRect) {
+        var clientRect = node.getBoundingClientRect();
+        var width = node.offsetWidth == null ? clientRect.width : node.offsetWidth;
+        return {
+            top: clientRect.top,
+            bottom: clientRect.bottom || (clientRect.top + clientRect.height),
+            right: clientRect.left + width,
+            left: clientRect.left,
+            width:  width,
+            height: node.offsetHeight == null ? clientRect.height : node.offsetHeight
+        };
+    }
+    return {};
+}
+
+function render() {
+  var el = $(".tab-pane.active");
+  var fileName = safeFileName(el.data("value")) + ".png";
+  
+  var w = el.width();
+  var h = el.height();
+  var offset = el.offset();
+  var testcanvas = document.createElement('canvas');
+  testcanvas.width = w * 2;
+  testcanvas.height = h * 2;
+  testcanvas.style.width = w + 'px';
+  testcanvas.style.height = h + 'px';
+  var context = testcanvas.getContext('2d');
+  context.translate(-offset.left*2, -(offset.top-$(window).scrollTop())*2);
+  context.scale(2,2);
+  
+  html2canvas(el, {
+    canvas: testcanvas,
+    onrendered: function(canvas) {
+      canvas.toBlob(function(blob) {
+          saveAs(blob, fileName);
+      });
+    }
+  });
+}
 
 /*!
  * jQuery Cookie Plugin v1.4.1
