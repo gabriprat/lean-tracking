@@ -8,7 +8,7 @@ $(document).ready(function(){
       $(this).attr("name", $(this).attr("id"));
     });
     
-    $(".nav-tabs").append($('<button id="export">Export tab as PNG</button>').click(render));
+    $(".nav-tabs").append($('<button id="export" class="btn btn-default">Export tab as PNG</button>').click(render));
     
     loadFormFromCookie();
 });
@@ -58,7 +58,7 @@ function render() {
     canvas: testcanvas,
     onrendered: function(canvas) {
       canvas.toBlob(function(blob) {
-          saveAs(blob, fileName);
+          if (blob != null) saveAs(blob, fileName);
       });
     }
   });
