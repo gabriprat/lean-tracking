@@ -1,7 +1,7 @@
 library(ggplot2)
 library(gtable)
 library(xts)
-
+library(zoo)
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 9MB.
@@ -20,20 +20,56 @@ shinyServer(function(input, output) {
     if (is.null(inFile))
       return(NULL)
     
-    data <- read.csv(inFile$datapath, header = input$header,
+    data <- read.csv(inFile$datapath, header = TRUE,
              sep = input$sep, quote = input$quote, fileEncoding = input$encoding)
     
+    if (!input$columnOpened %in% names(data)) {
+      stop(paste0('The opened column "', input$columnOpened, '" is not present in the dataset. Found these columns: ', paste(names(data), collapse=", ")))
+    }
+    
+    if (!input$columnClosed %in% names(data)) {
+      stop(paste0('The closed column "', input$columnClosed, '" is not present in the dataset. Found these columns: ', paste(names(data), collapse=", ")))
+    }
+    
+    if (nchar(input$columnState) > 0 & !input$columnState %in% names(data)) {
+      stop(paste0('The state column "', input$columnState, '" is not present in the dataset. Found these columns: ', paste(names(data), collapse=", ")))
+    }
+    
+    if (nchar(input$columnType) > 0 & !input$columnType %in% names(data)) {
+      stop(paste0('The type column "', input$columnType, '" is not present in the dataset. Found these columns: ', paste(names(data), collapse=", ")))
+    }
+      
     # Transform the date columns (the ones between the Opened and the Closed column including both) to date
     dateCols <- which(colnames(data)==input$columnOpened):which(colnames(data)==input$columnClosed) 
     for (idx in dateCols) {
-      data[,idx] <- as.Date(data[,idx], format=input$dateFormat)
+      d <- as.Date(data[,idx], format=input$dateFormat)
+      data[,idx] <- d
     }
     
-    closedIdx <- data[,input$columnState] == input$closedState 
+    repeat.before = function(x) {   # repeats the last non NA value. Keeps leading NA
+      x <- rev(x)
+      ind = which(!is.na(x))      # get positions of nonmissing values
+      n = length(x)
+      if(is.na(x[n]))             # if it ends with a missing, add the 
+        ind = c(n,ind)        # first position to the indices
+      x <- rep(x[ind], times = diff(   # repeat the values at these indices
+        c(ind, length(x) + 1) )) # diffing the indices + length yields how often 
+      rev(x)                     # they need to be repeated
+    }                               
     
-    # Remove inconsistencies: open tasks with closed date
-    openIdx <- !(data[,input$columnState] %in% c(input$closedState, input$discardedState))
-    data[openIdx, input$columnClosed] <- NA 
+    for (i in 1:dim(data)[1]) {
+      data[i,dateCols] <- repeat.before(data[i,dateCols])
+    }
+    
+    closedIdx <- !is.na(data[,input$columnClosed])
+    
+    if (input$columnState %in% names(data)) {
+      closedIdx <- data[,input$columnState] == input$closedState 
+    
+      # Remove inconsistencies: open tasks with closed date
+      openIdx <- !(data[,input$columnState] %in% c(input$closedState, input$discardedState))
+      data[openIdx, input$columnClosed] <- NA 
+    }
     
     # Compute lead time and the closing month and year (used for aggregation) for each row
     data[closedIdx,"LeadTime"] <- as.numeric(data[closedIdx,tail(dateCols, 1)] - data[closedIdx,head(dateCols, 1)])
@@ -84,16 +120,24 @@ shinyServer(function(input, output) {
       cs <- cumsum(t)
       df <- data.frame(Date = sort(unique(data[,x])))
       df[,names(data)[x]] <- cs
+      
       merge(acc, df, by="Date", all=TRUE)
     }, dateCols, data.frame(Date=as.Date(character())))
     dfs <- xts(dfs[,-1], order.by = dfs[,1])
-    dfs
+    # Start every column at 0
+    dfs[1,is.na(dfs[1,])] <- 0
+    # Interpolate values at NAs
+    dfs <- na.approx(dfs)
+    # Fill last NA values with previous ones
+    dfs <- na.locf(dfs)
+    
     p <- dygraph(dfs) %>% dyRangeSelector()
     
-    for (serieName in names(dfs)) {
+    for (serieName in rev(names(dateCols))) {
       p <- p %>% dySeries(serieName, fillGraph = TRUE)
     }
-    p <- p %>% dyOptions(connectSeparatedPoints = TRUE)
+    p <- p %>% dyOptions(stackedGraph=F, fillAlpha=1, colors=c('#C1DDEB', '#62A1CB', '#C9E9AD', '#70BC6B', '#FCB8B8', '#EB5F60', '#FED29A', '#FFA54C', '#DAC9E2', '#9777B8', '#FFFFB8', '#C88B68')) %>% 
+      dyLegend(show = "always", hideOnMouseOut = FALSE, labelsDiv="labels", labelsSeparateLines=T)
     p
 })
   

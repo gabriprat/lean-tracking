@@ -30,3 +30,17 @@ h2 a:hover {
 body {
   background-color: #fff;
 }
+
+#labels {
+  position: absolute;
+  top: 55px;
+  left: 100px;
+  background-color: #fff;
+  padding: 10px;
+  border: 1px solid #ddd;
+}
+
+.tab-content {
+  padding-top: 10px;
+  overflow-x: scroll;
+}

@@ -23,17 +23,16 @@ shinyUI(fluidPage(theme = "style.css",
         "The names of the Opened and Closed columns have to match the ones defined below. ")
       ),
       tags$hr(),
-      checkboxInput('header', 'Header', TRUE),
       radioButtons('sep', 'Separator',
                    c(Comma=',',
                      Semicolon=';',
                      Tab='\t'),
-                   ';'),
+                   selected=';'),
       radioButtons('quote', 'Quote',
                    c(None='',
                      'Double Quote'='"',
                      'Single Quote'="'"),
-                   '"'),
+                   selected='"'),
       tags$hr(),
       textInput("encoding", "File encoding", value="iso-8859-15"),
       radioButtons("outliers", "Outlier exclusion", 
@@ -41,12 +40,12 @@ shinyUI(fluidPage(theme = "style.css",
                      "Above 95%" = "ninetyfive",
                      "Above Q3 + 1.5*IQR" = "iqr"), 
                    selected="ninetyfive"),
-      textInput("columnOpened", "Opened column title", value="Creado"),
-      textInput("columnClosed", "Closed column title", value="Cerrada"),
-      textInput("columnState", "State column title", value="Estado"),
-      textInput("columnType", "Type column title", value="Clasificación.Petición"),
-      textInput("closedState", "Closed state value", value="En PRO / Resuelta"),
-      textInput("discardedState", "Discarded state value", value="Desestimada"),
+      textInput("columnOpened", "Opened column title", value="Open"),
+      textInput("columnClosed", "Closed column title", value="Closed"),
+      textInput("columnState", "State column title", value="State"),
+      textInput("columnType", "Type column title", value="Type"),
+      textInput("closedState", "Closed state value", value="Closed"),
+      textInput("discardedState", "Discarded state value", value="Discarded"),
       textInput("dateFormat", "Date format", value="%Y-%m-%d %H:%M"),
       tags$small(
         "Here you can find the ",
@@ -54,12 +53,15 @@ shinyUI(fluidPage(theme = "style.css",
       )
     ),
     mainPanel(
-      tabsetPanel(
-        tabPanel("Data", dataTableOutput('data')),
-        tabPanel("CFD", dygraphOutput("cfd")),
-        tabPanel("Histogram", plotOutput("histo")),
-        tabPanel("Scatter plot", plotOutput("scatter")),
-        tabPanel("Evolution", plotOutput("evolution"))
+      tags$head(tags$script(src="script.js"), tags$script(src="jquery.sticky.js")),
+      tags$div(class = "fixme", checked = NA,
+        tabsetPanel(
+          tabPanel("Data", dataTableOutput('data')),
+          tabPanel("CFD", dygraphOutput("cfd"), div(id="labels")),
+          tabPanel("Histogram", plotOutput("histo")),
+          tabPanel("Scatter plot", plotOutput("scatter")),
+          tabPanel("Evolution", plotOutput("evolution"))
+        )
       )
     )
   )
