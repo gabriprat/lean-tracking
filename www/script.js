@@ -255,3 +255,42 @@ loadFormFromCookie = function () {
         }
     });
 };
+
+
+var escapeHTML = function(str) {
+  return str.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+};
+
+/**
+ * Override the legend HTML generator to add the series toggle. To be replaced by
+ * a legendFormatter when R package for dygraphs supports it.
+ */
+var originalGenerateLegendHTML = Dygraph.Plugins.Legend.generateLegendHTML;
+Dygraph.Plugins.Legend.generateLegendHTML = function(g, x, sel_points, oneEmWidth, row) {
+  if (typeof sel_points == "undefined") return "";
+  var html = moment(x).format("LL");
+  var seriesNames = g.getLabels();
+  for (i = 1; i < seriesNames.length; i++) {
+    html += "<br/>";
+    var series = g.getPropertiesForSeries(seriesNames[i]);
+    var vis = g.visibility()[i-1] ? "checked='checked'" : "";
+    html += "<input type='checkbox' class='series-toggle' " + vis + " onclick='seriesToggle(this, " + (i-1) + ")'/><span>" + " <b><span style='color: " + series.color + ";'>" +
+        escapeHTML(seriesNames[i]) + "</span></b>:&#160;" + g.getValue(row, i) + "</span>";
+  }
+  return html;
+};
+
+/**
+ * Toggle the visibility of the charts series. Makes sure at least one is visible 
+ * so the legend does always show.
+ */
+function seriesToggle(el, idx) {
+  var g = HTMLWidgets.getInstance($(el.parentElement).prev(".dygraphs")[0]).dygraph;
+  var inputs = $(el.parentElement).find(".series-toggle");
+  var numChecked = inputs.toArray().reduce(function (x, y) { return x + y.checked; }, 0);
+  if (numChecked == 0) {
+    el.checked = true;
+    alert('At least one series should be visible');
+  }
+  g.setVisibility(idx, el.checked);
+}

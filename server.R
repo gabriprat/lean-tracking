@@ -150,7 +150,7 @@ shinyServer(function(input, output) {
     }
     cl <- rev(c('#A6CEE3', '#1F78B4', '#B2DF8A', '#33A02C', '#FDBF6F', '#FF7F00', '#FB9A99', '#E31A1C', '#CAB2D6', '#6A3D9A', '#FFFF99', '#B15928')[1:length(dateCols)])
     p <- p %>% dyOptions(stackedGraph=T, fillAlpha=.5, colors=cl) %>% 
-      dyLegend(show = "always", hideOnMouseOut = FALSE, labelsDiv="labels", labelsSeparateLines=T)
+      dyLegend(show = "always", hideOnMouseOut = FALSE, labelsDiv="cfd-labels", labelsSeparateLines=T)
     p
 })
   
