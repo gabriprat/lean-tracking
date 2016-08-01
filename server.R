@@ -109,7 +109,7 @@ shinyServer(function(input, output) {
       return(NULL)
     data <- input$data
     d <- dim(data)[2]
-    data[,1:(d-2)]
+    data[,1:(d-1)]
   })
   
   # Cumulative Flow Diagram for all the date columns
