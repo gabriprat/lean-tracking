@@ -2,6 +2,7 @@ library(ggplot2)
 library(gtable)
 library(xts)
 library(zoo)
+library(plotly)
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 9MB.
@@ -76,10 +77,11 @@ shinyServer(function(input, output) {
       data[openIdx, input$columnClosed] <- NA 
     }
     
-    # Compute lead time and the closing month and year (used for aggregation) for each row
+    # Compute lead time, age and the closing month and year (used for aggregation) for each row
     data[closedIdx,"LeadTime"] <- as.numeric(data[closedIdx,tail(dateCols, 1)] - data[closedIdx,head(dateCols, 1)])
-   
-     #Remove negative lead times
+    data[openIdx,"Age"] <- as.numeric(Sys.Date() - data[openIdx,head(dateCols, 1)])
+    
+    #Remove negative lead times
     #data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < 0,"LeadTime"] <- NA 
     
     cm <- strftime(data[,tail(dateCols, 1)], "%m")
@@ -99,7 +101,7 @@ shinyServer(function(input, output) {
            none = time)
     
     # Return data, quantiles and date columns
-    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, columnType=input$columnType, data.all=data.all)
+    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, openIdx=openIdx, columnType=input$columnType, data.all=data.all)
   })
   
   # Data table parsed from the input file
@@ -248,6 +250,51 @@ shinyServer(function(input, output) {
     
     ggplot_dual_axis(p1, p2)
     
+  })
+  
+  output$aging <-  renderPlotly({
+    input <- dataInput()
+    if (is.null(input))
+      return(NULL)
+    data <- input$data.all[input$openIdx,]
+    nm <- names(data)[1]
+    data[,"ID"] <- apply(data, 1, function(x) { paste0(nm, ": ", x[1]) }) 
+    qnt <- input$qnt
+    set.seed(1)
+    data[,"random"] <- runif(dim(data)[1])
+    texts <- apply(data, 1, function(x) {
+      paste("<dl><dt>", names(data)[1], "</dt><dd>", x[1], "</dd><dt>Age</dt><dd>", x["Age"], "</dd></dl>", sep="")
+    })
+    p <- ggplot(data, aes(x = random, y = Age)) + 
+      geom_point(aes(text=ID), alpha = 0.5, colour=rgb(0,.4,0)) +
+      geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
+      annotate("text", x=0, y = qnt["50%"], colour = "goldenrod1", label="50%") +
+      geom_hline(yintercept = qnt["85%"], colour = "orange", linetype=2, size=.25) + 
+      annotate("text", x=0, y = qnt["85%"], col = "orange", label="85%") + 
+      geom_hline(yintercept =  qnt["95%"], colour = "red", linetype=2, size=.25) +
+      annotate("text", x=0, y = qnt["95%"], col = "red", label="95%") +
+      theme_bw() +
+      theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
+                        panel.grid.minor = element_blank(), 
+                        legend.position="top", legend.key = element_blank())
+    
+    ggplotly(p) %>% layout(dragmode = "zoom")
+  })
+  
+  output$aging_desc <- renderUI({
+    input <- dataInput()
+    if (is.null(input))
+      return(NULL)
+    age <- input$data.all[input$openIdx,"Age"]
+    mean <- mean(age)
+    qnt <- quantile(age, probs=c(0, .25, .50, .75, .85, .95, 1), na.rm = T)
+    
+    tags$dl(
+      tags$dt("Mean"), tags$dd(round(mean)),
+      tags$dt("50%ile"), tags$dd(round(qnt["50%"])),
+      tags$dt("85%ile"), tags$dd(round(qnt["85%"])),
+      tags$dt("95%ile"), tags$dd(round(qnt["95%"]))
+    )
   })
 })
 

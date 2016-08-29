@@ -1,5 +1,6 @@
 library(shiny)
 library(dygraphs)
+library(plotly)
 
 shinyUI(fluidPage(theme = "style.css",
   titlePanel(windowTitle = "Lean tracking App",
@@ -66,7 +67,8 @@ shinyUI(fluidPage(theme = "style.css",
           tabPanel("CFD", dygraphOutput("cfd", height=500), div(id="cfd-labels", class="labels")),
           tabPanel("Histogram", plotOutput("histo")),
           tabPanel("Scatter plot", plotOutput("scatter")),
-          tabPanel("Evolution", plotOutput("evolution"))
+          tabPanel("Evolution", plotOutput("evolution")),
+          tabPanel("Aging", plotlyOutput("aging", height = 500), htmlOutput("aging_desc"))
         )
       )
     )
