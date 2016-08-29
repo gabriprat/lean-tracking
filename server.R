@@ -266,14 +266,18 @@ shinyServer(function(input, output) {
       paste("<dl><dt>", names(data)[1], "</dt><dd>", x[1], "</dd><dt>Age</dt><dd>", x["Age"], "</dd></dl>", sep="")
     })
     p <- ggplot(data, aes(x = random, y = Age)) + 
-      geom_point(aes(text=ID), alpha = 0.5, colour=rgb(0,.4,0)) +
-      geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
+      geom_point(aes(text=ID), alpha = 0.5, colour=rgb(0,.4,0))
+    
+    if (sum(is.na(qnt))==0) {
+      p <- p + geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
       annotate("text", x=0, y = qnt["50%"], colour = "goldenrod1", label="50%") +
       geom_hline(yintercept = qnt["85%"], colour = "orange", linetype=2, size=.25) + 
       annotate("text", x=0, y = qnt["85%"], col = "orange", label="85%") + 
       geom_hline(yintercept =  qnt["95%"], colour = "red", linetype=2, size=.25) +
-      annotate("text", x=0, y = qnt["95%"], col = "red", label="95%") +
-      theme_bw() +
+      annotate("text", x=0, y = qnt["95%"], col = "red", label="95%")
+    }
+    
+    p <- p + theme_bw() +
       theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
                         panel.grid.minor = element_blank(), 
                         legend.position="top", legend.key = element_blank())
