@@ -174,26 +174,33 @@ shinyServer(function(input, output) {
   })
   
   # Lead Time Scatter Plot with horizontal lines at different quantiles
-  output$scatter <- renderPlot({
+  output$scatter <- renderPlotly({
     input <- dataInput()
-    if (is.null(input))
-      return(NULL)
-    time <- input$data[input$closedIdx,"LeadTime"]
+    nm <- names(data)[1]
     data <- input$data[input$closedIdx,]
+    data[,"ID"] <- apply(data, 1, function(x) { paste0(nm, ": ", x[1]) }) 
     qnt <- input$qnt
     dateCols <- input$dateCols
-    plot(data[,tail(dateCols, 1)], time, xlab="Closing date", col=rgb(0,100,0,50,maxColorValue=255), pch=16, xaxt  = "n", ylab="Days to complete")
-    dmin <- min(data[input$closedIdx,tail(dateCols, 1)], na.rm=T)
-    dmax <- max(data[input$closedIdx,tail(dateCols, 1)], na.rm=T)
+    dmin <- min(data[,tail(dateCols, 1)], na.rm=T)
+    dmax <- max(data[,tail(dateCols, 1)], na.rm=T)
     ddif <- dmax - dmin
-    ticks_at <- dmin + approx(c(0, 503), n=4)$y
-    axis(side=1, at=ticks_at, ticks_at)
-    abline(h = qnt["50%"], col = "goldenrod1", lwd = 1, lty = 2)
-    text(dmin, qnt["50%"], col = "goldenrod1", labels="50%", pos=4)
-    abline(h = qnt["85%"], col = "orange", lwd = 1, lty = 2)
-    text(dmin, qnt["85%"], col = "orange", labels="85%", pos=4)
-    abline(h = qnt["95%"], col = "red", lwd = 1, lty = 2)
-    text(dmin, qnt["95%"], col = "red", labels="95%", pos=4)
+    breaks <- seq(dmin, dmax, length.out=10)
+
+    p <- ggplot(data, aes_string(x = names(data)[tail(dateCols, 1)], y = "LeadTime")) + 
+      geom_point(aes(text=ID), alpha = 0.3, colour=rgb(0,.4,0)) +
+      geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
+      annotate("text", x=dmin, y = qnt["50%"], colour = "goldenrod1", label="50%") +
+      geom_hline(yintercept = qnt["85%"], colour = "orange", linetype=2, size=.25) + 
+      annotate("text", x=dmin, y = qnt["85%"], col = "orange", label="85%") + 
+      geom_hline(yintercept =  qnt["95%"], colour = "red", linetype=2, size=.25) +
+      annotate("text", x=dmin, y = qnt["95%"], col = "red", label="95%") +
+      theme_bw() +
+      theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
+            panel.grid.minor = element_blank(), 
+            legend.position="top", legend.key = element_blank()) + 
+      scale_x_date(date_labels = "%d-%b-%y", breaks = breaks)
+    
+    ggplotly(p) %>% layout(dragmode = "zoom")
   })
   
   # Lead time and throughput evolution over time
@@ -262,11 +269,8 @@ shinyServer(function(input, output) {
     qnt <- input$qnt
     set.seed(1)
     data[,"random"] <- runif(dim(data)[1])
-    texts <- apply(data, 1, function(x) {
-      paste("<dl><dt>", names(data)[1], "</dt><dd>", x[1], "</dd><dt>Age</dt><dd>", x["Age"], "</dd></dl>", sep="")
-    })
     p <- ggplot(data, aes(x = random, y = Age)) + 
-      geom_point(aes(text=ID), alpha = 0.5, colour=rgb(0,.4,0))
+      geom_point(aes(text=ID), alpha = 0.3, colour=rgb(0,.4,0))
     
     if (sum(is.na(qnt))==0) {
       p <- p + geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 

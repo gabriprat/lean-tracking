@@ -65,9 +65,9 @@ shinyUI(fluidPage(theme = "style.css",
         tabsetPanel(
           tabPanel("Data", dataTableOutput('data')),
           tabPanel("CFD", dygraphOutput("cfd", height=500), div(id="cfd-labels", class="labels")),
-          tabPanel("Histogram", plotOutput("histo")),
-          tabPanel("Scatter plot", plotOutput("scatter")),
-          tabPanel("Evolution", plotOutput("evolution")),
+          tabPanel("Histogram", plotOutput("histo", height = 500)),
+          tabPanel("Scatter plot", plotlyOutput("scatter", height = 500)),
+          tabPanel("Evolution", plotOutput("evolution", height = 500)),
           tabPanel("Aging", plotlyOutput("aging", height = 500), htmlOutput("aging_desc"))
         )
       )
