@@ -68,10 +68,12 @@ shinyServer(function(input, output) {
     }
     
     closedIdx <- !is.na(data[,input$columnClosed])
-    
+    openIdx <- !closedIdx
+      
     if (input$columnState %in% names(data)) {
       closedIdx <- data[,input$columnState] == input$closedState 
-    
+      discardedIdx <- data[,input$columnState] == input$discardedState
+      
       # Remove inconsistencies: open tasks with closed date
       openIdx <- !(data[,input$columnState] %in% c(input$closedState, input$discardedState))
       data[openIdx, input$columnClosed] <- NA 
@@ -82,7 +84,8 @@ shinyServer(function(input, output) {
     data[openIdx,"Age"] <- as.numeric(Sys.Date() - data[openIdx,head(dateCols, 1)])
     
     #Remove negative lead times
-    #data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < 0,"LeadTime"] <- NA 
+    data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < 0,"Error"] <- TRUE
+    data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < 0,"LeadTime"] <- NA 
     
     cm <- strftime(data[,tail(dateCols, 1)], "%m")
     cy <- strftime(data[,tail(dateCols, 1)], "%Y")
@@ -101,7 +104,7 @@ shinyServer(function(input, output) {
            none = time)
     
     # Return data, quantiles and date columns
-    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, openIdx=openIdx, columnType=input$columnType, data.all=data.all)
+    list(data=data, qnt=qnt, dateCols=dateCols, closedIdx=closedIdx, openIdx=openIdx, discardedIdx=discardedIdx, columnType=input$columnType, data.all=data.all)
   })
   
   # Data table parsed from the input file
@@ -229,10 +232,11 @@ shinyServer(function(input, output) {
     }
     
     conf.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = mean_stats))
-    p1 <- ggplot(data,aes_string(x="ClosedMonth",y="1")) 
+    p1 <- ggplot(data,aes_string(y="1")) 
     legendtitle <- c()
     if (nchar(input$columnType)>0) {
-      p1 <- p1 + stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") 
+      p1 <- p1 + stat_summary(x="ClosedMonth", aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") 
+      p1 <- p1 + stat_summary(x="DiscardedMonth", aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") 
       legendtitle <- element_text()
     } else {
       p1 <- p1 + stat_summary(aes(fill="items"), fun.y=sum, position="stack", geom="bar") 
