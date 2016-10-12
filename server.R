@@ -142,7 +142,7 @@ shinyServer(function(input, output) {
     # Fill last NA values with previous ones
     dfs <- na.locf(dfs)
     
-    sum <- rep(0, dim(data)[2])
+    sum <- rep(0, dim(dfs)[1])
     for (i in (length(dateCols)-1):1) {
       sum <- sum + dfs[,names(dateCols)[i+1]]
       dfs[,names(dateCols)[i]] <- dfs[,names(dateCols)[i]] - sum
@@ -232,11 +232,10 @@ shinyServer(function(input, output) {
     }
     
     conf.ev <- do.call(data.frame, aggregate(LeadTime ~ ClosedMonth, data, FUN = mean_stats))
-    p1 <- ggplot(data,aes_string(y="1")) 
+    p1 <- ggplot(data,aes_string(x="ClosedMonth",y="1")) 
     legendtitle <- c()
     if (nchar(input$columnType)>0) {
-      p1 <- p1 + stat_summary(x="ClosedMonth", aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") 
-      p1 <- p1 + stat_summary(x="DiscardedMonth", aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar") 
+      p1 <- p1 + stat_summary(aes_string(fill=input$columnType), fun.y=sum, position="stack", geom="bar")
       legendtitle <- element_text()
     } else {
       p1 <- p1 + stat_summary(aes(fill="items"), fun.y=sum, position="stack", geom="bar") 
@@ -258,6 +257,7 @@ shinyServer(function(input, output) {
       theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
             panel.grid.minor = element_blank(), panel.border = element_blank(),
             legend.position="top", legend.key = element_blank())
+    
     
     ggplot_dual_axis(p1, p2)
     
@@ -369,11 +369,11 @@ ggplot_dual_axis = function(plot1, plot2, which.axis = "y") {
   }
   
   # extract legend
-  leg1 <- g1$grobs[[which(g1$layout$name == "guide-box")]]
-  leg2 <- g2$grobs[[which(g2$layout$name == "guide-box")]]
+  #leg1 <- g1$grobs[[which(g1$layout$name == "guide-box")]]
+  #leg2 <- g2$grobs[[which(g2$layout$name == "guide-box")]]
   
-  g$grobs[[which(g$layout$name == "guide-box")]] <- 
-    gtable:::cbind_gtable(leg1, leg2, "first")
+  #g$grobs[[which(g$layout$name == "guide-box")]] <- 
+   # gtable:::cbind_gtable(leg1, leg2, "first")
   
   # Draw it
   grid::grid.draw(g)
