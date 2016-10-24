@@ -49,3 +49,7 @@ body {
 #export {
   float: right;
 }
+
+td, th {
+  padding: 0.1em 1em;
+}

@@ -3,6 +3,8 @@ library(gtable)
 library(xts)
 library(zoo)
 library(plotly)
+library(RColorBrewer)
+library(stringr)
 
 # By default, the file size limit is 5MB. It can be changed by
 # setting this option. Here we'll raise limit to 9MB.
@@ -154,7 +156,11 @@ shinyServer(function(input, output) {
     for (serieName in names(dateCols)) {
       p <- p %>% dySeries(serieName, fillGraph = TRUE)
     }
-    cl <- rev(c('#A6CEE3', '#1F78B4', '#B2DF8A', '#33A02C', '#FDBF6F', '#FF7F00', '#FB9A99', '#E31A1C', '#CAB2D6', '#6A3D9A', '#FFFF99', '#B15928')[1:length(dateCols)])
+    if (length(dateCols) > 12) {
+      cl <- colorRampPalette(brewer.pal(12,"Paired"))(length(dateCols))
+    } else {
+      cl <- brewer.pal(12,"Paired")[1:length(dateCols)]
+    }
     p <- p %>% dyOptions(stackedGraph=T, fillAlpha=.5, colors=cl) %>% 
       dyLegend(show = "always", hideOnMouseOut = FALSE, labelsDiv="cfd-labels", labelsSeparateLines=T)
     p
@@ -273,9 +279,15 @@ shinyServer(function(input, output) {
     data[,"ID"] <- apply(data, 1, function(x) { paste0(nm, ": ", x[1]) }) 
     qnt <- input$qnt
     set.seed(1)
+    
+    data[,"lastState"] <- apply(data, 1, function(x) {
+      col <- max(which(!is.na(x[input$dateCols])))
+      paste0(str_pad(col, 2, pad="0"), ". ", names(data)[input$dateCols[col]])
+    })
+    
     data[,"random"] <- runif(dim(data)[1])
-    p <- ggplot(data, aes(x = random, y = Age)) + 
-      geom_point(aes(text=ID), alpha = 0.3, colour=rgb(0,.4,0))
+    p <- ggplot(data, aes(x = lastState, y = Age)) + 
+      geom_jitter(aes(text=ID), alpha = 0.3, colour=rgb(0,.4,0), width=.5, height=0) 
     
     if (sum(is.na(qnt))==0) {
       p <- p + geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
@@ -289,25 +301,51 @@ shinyServer(function(input, output) {
     p <- p + theme_bw() +
       theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
                         panel.grid.minor = element_blank(), 
-                        legend.position="top", legend.key = element_blank())
+                        legend.position="top", legend.key = element_blank(),
+                        axis.text.x = element_text(angle = 90),
+                        axis.title.x=element_blank())
     
     ggplotly(p) %>% layout(dragmode = "zoom")
   })
   
   output$aging_desc <- renderUI({
     input <- dataInput()
+    data <- input$data.all[input$openIdx,];
+    
     if (is.null(input))
       return(NULL)
-    age <- input$data.all[input$openIdx,"Age"]
+   
+    data[,"lastState"] <- apply(data, 1, function(x) {
+      col <- max(which(!is.na(x[input$dateCols])))
+      paste0(str_pad(col, 2, pad="0"), ". ", names(data)[input$dateCols[col]])
+    })
+    
+    rows <- list(
+      tags$thead(
+        tags$tr(
+          tags$th("State"), tags$th("Mean"), tags$th("50%ile"), tags$th("85%ile"), tags$th("95%ile")
+        )
+      )
+    )
+    
+    for (i in 1:(length(input$dateCols)-1)) {
+      stateName <- paste0(str_pad(i, 2, pad="0"), ". ", names(data)[input$dateCols[i]])
+      age <- data[which(data[,"lastState"]==stateName),"Age"]
+      mean <- mean(age)
+      qnt <- quantile(age, probs=c(0, .25, .50, .75, .85, .95, 1), na.rm = T)
+      rows[[length(rows)+1]] <- tags$tr(
+        tags$td(stateName),tags$td(round(mean)), tags$td(round(qnt["50%"])), tags$td(round(qnt["85%"])), tags$td(round(qnt["95%"]))
+      )
+    }
+    
+    age <- data[,"Age"]
     mean <- mean(age)
     qnt <- quantile(age, probs=c(0, .25, .50, .75, .85, .95, 1), na.rm = T)
-    
-    tags$dl(
-      tags$dt("Mean"), tags$dd(round(mean)),
-      tags$dt("50%ile"), tags$dd(round(qnt["50%"])),
-      tags$dt("85%ile"), tags$dd(round(qnt["85%"])),
-      tags$dt("95%ile"), tags$dd(round(qnt["95%"]))
+    rows[[length(rows)+1]] <- tags$tr(
+      tags$td("TOTAL"),tags$td(round(mean)), tags$td(round(qnt["50%"])), tags$td(round(qnt["85%"])), tags$td(round(qnt["95%"]))
     )
+    
+    do.call(tags$table,rows)
   })
 })
 
