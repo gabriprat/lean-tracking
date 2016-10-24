@@ -52,15 +52,15 @@ shinyServer(function(input, output) {
       data[,idx] <- d
     }
     
-    repeat.before = function(x) {   # repeats the last non NA value. Keeps leading NA
+    repeat.before = function(x) {   # repeats the first non NA value. Keeps trailing NA
       x <- rev(x)
-      ind = which(!is.na(x))      # get positions of nonmissing values
-      n = length(x)
-      if(is.na(x[n]))             # if it ends with a missing, add the 
-        ind = c(n,ind)        # first position to the indices
-      x <- rep(x[ind], times = diff(   # repeat the values at these indices
-        c(ind, length(x) + 1) )) # diffing the indices + length yields how often 
-      rev(x)                     # they need to be repeated
+      ind = which(!is.na(x))          # get positions of nonmissing values
+      if(is.na(x[1]))                 # if it ends with a missing, add the 
+        ind = c(1,ind)                # first position to the indices
+      x <- rep(x[ind], times = diff(  # repeat the values at these indices
+        c(ind, length(x) + 1) ))      # diffing the indices + length yields how often 
+                                      # they need to be repeated
+      rev(x)  
     }                               
     
     for (i in 1:dim(data)[1]) {
@@ -70,6 +70,7 @@ shinyServer(function(input, output) {
     closedIdx <- !is.na(data[,input$columnClosed])
     openIdx <- !closedIdx
       
+    discardedIdx <- NULL
     if (input$columnState %in% names(data)) {
       closedIdx <- data[,input$columnState] == input$closedState 
       discardedIdx <- data[,input$columnState] == input$discardedState
