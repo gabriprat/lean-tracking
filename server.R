@@ -23,8 +23,8 @@ shinyServer(function(input, output) {
     if (is.null(inFile))
       return(NULL)
     
-    data <- read.csv(inFile$datapath, header = TRUE,
-             sep = input$sep, quote = input$quote, fileEncoding = input$encoding)
+    data <- read.csv(inFile$datapath, header = TRUE, stringsAsFactors = FALSE,
+             sep = input$sep, quote = input$quote, encoding = input$encoding)
     
     if (!input$columnOpened %in% names(data)) {
       stop(paste0('The opened column "', input$columnOpened, '" is not present in the dataset. Found these columns: ', paste(names(data), collapse=", ")))
@@ -47,10 +47,10 @@ shinyServer(function(input, output) {
       }
     }
       
-    # Transform the date columns (the ones between the Opened and the Closed column including both) to date
+    # Transform the date columns (the ones between the Opened and the Closed column including both) to POSIXct
     dateCols <- which(colnames(data)==input$columnOpened):which(colnames(data)==input$columnClosed) 
     for (idx in dateCols) {
-      d <- as.Date(data[,idx], format=input$dateFormat)
+      d <- as.POSIXct(strptime(data[,idx], format=input$dateFormat))
       data[,idx] <- d
     }
     
@@ -83,8 +83,13 @@ shinyServer(function(input, output) {
     }
     
     # Compute lead time, age and the closing month and year (used for aggregation) for each row
-    data[closedIdx,"LeadTime"] <- as.numeric(data[closedIdx,tail(dateCols, 1)] - data[closedIdx,head(dateCols, 1)])
-    data[openIdx,"Age"] <- as.numeric(Sys.Date() - data[openIdx,head(dateCols, 1)])
+    data[closedIdx,"LeadTime"] <- as.numeric(difftime(data[closedIdx,tail(dateCols, 1)], data[closedIdx,head(dateCols, 1)]), units = "days")
+    data[openIdx,"Age"] <- as.numeric(difftime(Sys.Date(),  data[openIdx,head(dateCols, 1)]), units = "days")
+    
+    # Transform the date columns (the ones between the Opened and the Closed column including both) to Date
+    for (idx in dateCols) {
+      data[,idx] <- as.Date(data[,idx])
+    }
     
     #Remove negative lead times
     data[!is.na(data[,"LeadTime"]) & data[,"LeadTime"] < 0,"Error"] <- TRUE
