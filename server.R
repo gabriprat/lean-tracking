@@ -202,7 +202,7 @@ shinyServer(function(input, output) {
     breaks <- seq(dmin, dmax, length.out=10)
 
     p <- ggplot(data, aes_string(x = names(data)[tail(dateCols, 1)], y = "LeadTime")) + 
-      geom_point(aes(text=ID), alpha = 0.3, colour=rgb(0,.4,0)) +
+      geom_point(aes_string(text="ID", colour = input$columnType), alpha = 0.3) +
       geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
       annotate("text", x=dmin, y = qnt["50%"], colour = "goldenrod1", label="50%") +
       geom_hline(yintercept = qnt["85%"], colour = "orange", linetype=2, size=.25) + 
@@ -263,7 +263,7 @@ shinyServer(function(input, output) {
       stat_summary(aes(colour="mean", shape="mean", group=1, label=..y..), fun.y=mean, geom="line", size=0.7, linetype="dashed") +
       stat_summary(aes(colour="pctl85", shape="pctl85", group=1, label=..y..), fun.y=pctl85, geom="line", size=1.1) +
       stat_summary(aes(label= round(..y..), colour="pctl85"), fun.y=pctl85, geom="label", show.legend = FALSE, size=5) +
-      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "±", round(LeadTime.conf.int), " (", round(LeadTime.cv), "%)"), colour="mean", parse=T), data=conf.ev, vjust = 1.5, show.legend = FALSE) +
+      geom_text(aes(x=ClosedMonth, y=LeadTime.mean, label=paste0(round(LeadTime.mean), "??", round(LeadTime.conf.int), " (", round(LeadTime.cv), "%)"), colour="mean", parse=T), data=conf.ev, vjust = 1.5, show.legend = FALSE) +
       theme_bw() + labs(colour="Lead time") +
       xlab("Closing month") + ylab("Lead time (days)") + 
       theme(panel.background = element_blank(), panel.grid.major = element_blank(), 
