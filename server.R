@@ -84,7 +84,7 @@ shinyServer(function(input, output) {
     
     # Compute lead time, age and the closing month and year (used for aggregation) for each row
     data[closedIdx,"LeadTime"] <- as.numeric(difftime(data[closedIdx,tail(dateCols, 1)], data[closedIdx,head(dateCols, 1)]), units = "days")
-    data[openIdx,"Age"] <- as.numeric(difftime(Sys.Date(),  data[openIdx,head(dateCols, 1)]), units = "days")
+    data[openIdx,"Age"] <- round(as.numeric(difftime(Sys.Date(),  data[openIdx,head(dateCols, 1)]), units = "days"))
     
     # Transform the date columns (the ones between the Opened and the Closed column including both) to Date
     for (idx in dateCols) {
@@ -201,6 +201,7 @@ shinyServer(function(input, output) {
     ddif <- dmax - dmin
     breaks <- seq(dmin, dmax, length.out=10)
 
+    #data$HREF <- paste0("<a href\"", data$Link, "\">", data$ID, "</a>")
     p <- ggplot(data, aes_string(x = names(data)[tail(dateCols, 1)], y = "LeadTime")) + 
       geom_point(aes_string(text="ID", colour = input$columnType), alpha = 0.3) +
       geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
@@ -292,7 +293,7 @@ shinyServer(function(input, output) {
     
     data[,"random"] <- runif(dim(data)[1])
     p <- ggplot(data, aes(x = lastState, y = Age)) + 
-      geom_jitter(aes(text=ID), alpha = 0.3, colour=rgb(0,.4,0), width=.5, height=0) 
+      geom_jitter(aes(text=ID, colour=Type), alpha = 0.3, width=.5, height=0) 
     
     if (sum(is.na(qnt))==0) {
       p <- p + geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
