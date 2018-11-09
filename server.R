@@ -293,7 +293,7 @@ shinyServer(function(input, output) {
     
     data[,"random"] <- runif(dim(data)[1])
     p <- ggplot(data, aes(x = lastState, y = Age)) + 
-      geom_jitter(aes(text=ID, colour=Type), alpha = 0.3, width=.5, height=0) 
+      geom_jitter(aes_string(text="ID", colour = input$columnType), alpha = 0.3, width=.5, height=0)
     
     if (sum(is.na(qnt))==0) {
       p <- p + geom_hline(yintercept = qnt["50%"], colour = "goldenrod1", linetype=2, size=.25) + 
